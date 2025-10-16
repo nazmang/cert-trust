@@ -1,7 +1,7 @@
 SHELL ?= /usr/bin/bash
 
 # Image settings
-IMAGE ?= nazman/cert-trust
+IMAGE ?= ghcr.io/nazmang/cert-trust
 TAG ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 0.1.0)
 
 # Helm settings
