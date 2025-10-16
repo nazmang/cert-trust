@@ -1,0 +1,34 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cert-trust.fullname" . }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get","list","watch","create","update","patch"]
+  - apiGroups: ["cert.trust.flolive.io"]
+    resources: ["certificateexports","certificateimports"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["cert.trust.flolive.io"]
+    resources: ["certificateexports/status","certificateimports/status"]
+    verbs: ["update","patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cert-trust.fullname" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cert-trust.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "cert-trust.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "cert-trust.serviceAccountName" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "cert-trust.name" . }}

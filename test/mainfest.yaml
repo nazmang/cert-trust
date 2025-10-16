@@ -1,0 +1,19 @@
+apiVersion: cert.trust.flolive.io/v1
+kind: CertificateExport
+metadata:
+  name: export-srvx-cc-cert
+  namespace: gateway
+spec:
+  secretRef: srvx-cc-tls
+  schedule: "*/2 * * * *"
+---
+apiVersion: cert.trust.flolive.io/v1
+kind: CertificateImport
+metadata:
+  name: import-srvx-cc-cert
+  namespace: default
+spec:
+  fromExport: gateway/export-srvx-cc-cert
+  targetSecret: srvx-cc-tls-ddd
+  schedule: "@every 2h" # optional
+

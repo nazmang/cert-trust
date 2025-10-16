@@ -1,0 +1,13 @@
+replicaCount: 1
+image:
+  repository: nazman/cert-trust
+  tag: "0.1.2"
+  pullPolicy: IfNotPresent
+leaderElection: false
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+serviceAccount:
+  create: true
+  name: ""

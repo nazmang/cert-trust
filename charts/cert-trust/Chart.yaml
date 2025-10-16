@@ -1,0 +1,5 @@
+apiVersion: v2
+name: cert-trust
+version: 0.1.0
+appVersion: "0.1.0"
+description: Synchronize TLS certificates between namespaces via CertificateExport/Import CRDs
