@@ -121,24 +121,3 @@ jobs:
             ghcr.io/${{ github.actor }}/cert-trust:${{ steps.version.outputs.version }}
             ghcr.io/${{ github.actor }}/cert-trust:latest
           platforms: linux/amd64,linux/arm64
-
-  master-build:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.22"
-
-      - name: Build binary
-        run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/manager ./cmd/cert-trust
-
-      - name: Test build
-        run: |
-          ./bin/manager --help || true
