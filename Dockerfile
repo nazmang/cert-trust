@@ -1,5 +1,5 @@
 # ---------- Build stage ----------
-FROM golang:1.22 AS builder
+FROM registry.k8s.io/golang:1.22 AS builder
 WORKDIR /workspace
 
 # Enable Go modules and caching
