@@ -3,9 +3,9 @@
 Synchronize Kubernetes TLS certificates between namespaces using two CRDs: `CertificateExport` and `CertificateImport`. A lightweight controller periodically copies TLS secrets based on cron-like schedules.
 
 ## Concepts
-- `CertificateExport` (source namespace): points to a TLS secret (`kubernetes.io/tls`).
-- `CertificateImport` (target namespace): references a `CertificateExport` (same namespace or `ns/name`) and writes/updates a target TLS secret.
-- Each resource supports an optional cron schedule. Default: `@every 1h`.
+- `CertificateExport` (source namespace): points to a TLS secret (`kubernetes.io/tls`) to be shared.
+- `CertificateImport` (target namespace): references a `CertificateExport` (same namespace or `ns/name`) and copies the secret data to a target TLS secret.
+- Only `CertificateImport` supports cron scheduling. Default: `@every 1h`.
 
 ## Quick Start
 
@@ -62,6 +62,22 @@ This installs:
 Values of interest in `values.yaml`:
 - `image.repository`, `image.tag`
 - `leaderElection`
+ - `immediateSyncOnStart`
+
+## Command-line flags
+
+The controller binary accepts the following flags:
+
+```text
+--metrics-bind-address string       The address the metric endpoint binds to (default ":8080")
+--health-probe-bind-address string  The address the probe endpoint binds to (default ":8081")
+--leader-elect                      Enable leader election for controller manager (default false)
+--immediate-sync-on-start           Trigger a one-time immediate sync when the scheduler starts (default false)
+```
+
+Helm chart maps values to flags:
+- `leaderElection` → `--leader-elect`
+- `immediateSyncOnStart` → `--immediate-sync-on-start`
 
 ## Usage Examples
 
@@ -83,7 +99,6 @@ metadata:
   namespace: backend
 spec:
   secretRef: myapp-tls
-  schedule: "0 */6 * * *" # every 6 hours (optional)
 ```
 
 3) Create a CertificateImport in target namespace:
@@ -96,7 +111,7 @@ metadata:
 spec:
   fromExport: backend/export-myapp-cert
   targetSecret: myapp-tls
-  schedule: "@every 2h" # optional
+  schedule: "@every 2h" # optional, default: @every 1h
 ```
 
 ### Example 2: Cross-Namespace Certificate Sharing
@@ -109,7 +124,6 @@ metadata:
   namespace: gateway
 spec:
   secretRef: wildcard-tls
-  schedule: "*/30 * * * *" # every 30 minutes
 ---
 # In api namespace - import the certificate
 apiVersion: cert.trust.flolive.io/v1
@@ -120,6 +134,7 @@ metadata:
 spec:
   fromExport: gateway/export-wildcard-cert
   targetSecret: wildcard-tls
+  schedule: "*/30 * * * *" # every 30 minutes
 ---
 # In web namespace - import the same certificate
 apiVersion: cert.trust.flolive.io/v1
@@ -130,6 +145,7 @@ metadata:
 spec:
   fromExport: gateway/export-wildcard-cert
   targetSecret: wildcard-tls
+  schedule: "*/30 * * * *" # every 30 minutes
 ```
 
 ### Example 3: Same Namespace Reference
@@ -151,6 +167,7 @@ metadata:
 spec:
   fromExport: export-main-cert  # No namespace prefix needed
   targetSecret: main-tls-copy
+  schedule: "@every 1h" # optional
 ```
 
 ## Monitoring
@@ -184,10 +201,10 @@ kubectl get secret myapp-tls -n frontend
 ```bash
 # Build and run locally
 make build
-./bin/manager --leader-elect=false
+./bin/manager --leader-elect=false --immediate-sync-on-start=false
 
 # Run with debug logging
-go run ./cmd/cert-trust --leader-elect=false
+go run ./cmd/cert-trust --leader-elect=false --immediate-sync-on-start=true
 ```
 
 ### Testing
@@ -205,8 +222,11 @@ kubectl get secret srvx-cc-tls-default -n default
 - `"*/2 * * * *"` - Every 2 minutes
 - `"0 */6 * * *"` - Every 6 hours
 - `"@every 1h"` - Every hour
+- `"@every 30m"` - Every 30 minutes
 - `"0 0 * * *"` - Daily at midnight
 - `"0 0 * * 0"` - Weekly on Sunday
+
+**Note**: Only `CertificateImport` resources support scheduling. `CertificateExport` resources are static references to source secrets.
 
 ### Helm Values
 ```yaml
@@ -217,7 +237,17 @@ image:
   tag: "0.1.0"
   pullPolicy: IfNotPresent
 leaderElection: false
+immediateSyncOnStart: false
+timezone: "Europe/Athens"
 resources: {}
+```
+
+To enable a one-time immediate sync on deployment with Helm:
+
+```bash
+helm upgrade --install cert-trust ./charts/cert-trust \
+  -n cert-trust --create-namespace \
+  --set immediateSyncOnStart=true
 ```
 
 ## Troubleshooting

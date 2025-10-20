@@ -22,7 +22,6 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,shortName=cex
 // +kubebuilder:printcolumn:name=Secret,JSONPath=.spec.secretRef,description=Source TLS secret,type=string
-// +kubebuilder:printcolumn:name=Schedule,JSONPath=.spec.schedule,description=Cron schedule,type=string
 // CertificateExport specifies a source secret to export from this namespace
 // to other namespaces.
 type CertificateExport struct {
@@ -36,8 +35,6 @@ type CertificateExport struct {
 type CertificateExportSpec struct {
 	// SecretRef is the name of a TLS secret in the same namespace
 	SecretRef string `json:\"secretRef\"`
-	// Schedule is a cron expression determining when to refresh data from the source
-	Schedule string `json:\"schedule,omitempty\"`
 }
 
 type CertificateExportStatus struct {

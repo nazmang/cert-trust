@@ -19,8 +19,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func RegisterWithManager(mgr ctrl.Manager) error {
-	c := NewSyncController(mgr.GetClient(), mgr.GetScheme())
+func RegisterWithManager(mgr ctrl.Manager, immediateOnStart bool) error {
+	c := NewSyncController(mgr.GetClient(), mgr.GetScheme(), immediateOnStart)
 	return mgr.Add(c)
 }
 

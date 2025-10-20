@@ -1,9 +1,15 @@
 replicaCount: 1
 image:
-  repository: nazman/cert-trust
-  tag: "0.1.2"
+  repository: ghcr.io/nazmang/cert-trust
+  tag: "0.1.3"
   pullPolicy: IfNotPresent
+imagePullSecrets:
+  - name: ghcr-credentials
 leaderElection: false
+# Trigger a one-time immediate export/import sync on startup
+immediateSyncOnStart: false
+# Timezone for cron scheduling and log timestamps
+timezone: "Europe/Athens"
 resources: {}
 nodeSelector: {}
 tolerations: []

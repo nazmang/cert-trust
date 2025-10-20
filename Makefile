@@ -32,7 +32,7 @@ docker-push:
 	docker push $(IMAGE):$(TAG)
 
 .PHONY: helm-install
-helm-install:
+helm-install: docker-build docker-push
 	helm upgrade --install $(RELEASE) $(CHART_PATH) \
 	  --namespace $(NAMESPACE) --create-namespace \
 	  --set image.repository=$(IMAGE) \

@@ -69,10 +69,12 @@ func main() {
 	var metricsAddr string
 	var probeAddr string
 	var enableLeaderElection bool
+	var immediateOnStart bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&immediateOnStart, "immediate-sync-on-start", false, "Trigger a one-time immediate sync when the scheduler starts.")
 	flag.Parse()
 
 	setupLog = newZapLogger()
@@ -100,7 +102,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := controllers.RegisterWithManager(mgr); err != nil {
+	if err := controllers.RegisterWithManager(mgr, immediateOnStart); err != nil {
 		setupLog.Error(err, "unable to register controllers")
 		os.Exit(1)
 	}

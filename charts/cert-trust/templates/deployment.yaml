@@ -20,12 +20,20 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       serviceAccountName: {{ include "cert-trust.serviceAccountName" . }}
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
       containers:
         - name: manager
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "--leader-elect={{ .Values.leaderElection }}"
+            - "--immediate-sync-on-start={{ .Values.immediateSyncOnStart }}"
+          env:
+            - name: TZ
+              value: "{{ .Values.timezone }}"
           ports:
             - name: metrics
               containerPort: 8080
