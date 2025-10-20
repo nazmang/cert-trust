@@ -18,6 +18,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 # ---------- Runtime stage ----------
 FROM gcr.io/distroless/static:nonroot
+LABEL org.opencontainers.image.source https://github.com/nazmang/cert-trust
 USER nonroot:nonroot
 WORKDIR /
 COPY --from=builder /manager /manager
