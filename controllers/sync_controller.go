@@ -172,9 +172,14 @@ func (s *SyncController) buildSchedules(ctx context.Context) error {
 			if err := s.syncImport(context.Background(), ns, name, fromExport, targetSecret); err != nil {
 				logger.Error(err, "failed to sync import", "import", fmt.Sprintf("%s/%s", ns, name))
 			} else {
-				// Log next run time after successful execution
-				if entry := s.cron.Entry(entryID); entry.Valid() {
-					logger.Info("import sync completed", "import", fmt.Sprintf("%s/%s", ns, name), "nextRun", entry.Next)
+				// Log completion and next run time
+				logger.Info("import sync completed", "import", fmt.Sprintf("%s/%s", ns, name))
+				// Get all entries to find the next run time for this import
+				for _, entry := range s.cron.Entries() {
+					if entry.Valid() {
+						logger.Info("next scheduled run", "import", fmt.Sprintf("%s/%s", ns, name), "nextRun", entry.Next)
+						break // Only log the first valid entry's next run
+					}
 				}
 			}
 		})
