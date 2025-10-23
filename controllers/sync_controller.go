@@ -167,9 +167,15 @@ func (s *SyncController) buildSchedules(ctx context.Context) error {
 
 		log.FromContext(ctx).Info("scheduling import", "import", fmt.Sprintf("%s/%s", ns, name), "schedule", schedule)
 		entryID, err := s.cron.AddFunc(schedule, func() {
-			log.FromContext(context.Background()).Info("executing import sync", "import", fmt.Sprintf("%s/%s", ns, name))
+			logger := log.FromContext(context.Background())
+			logger.Info("executing import sync", "import", fmt.Sprintf("%s/%s", ns, name))
 			if err := s.syncImport(context.Background(), ns, name, fromExport, targetSecret); err != nil {
-				log.FromContext(context.Background()).Error(err, "failed to sync import", "import", fmt.Sprintf("%s/%s", ns, name))
+				logger.Error(err, "failed to sync import", "import", fmt.Sprintf("%s/%s", ns, name))
+			} else {
+				// Log next run time after successful execution
+				if entry := s.cron.Entry(entryID); entry.Valid() {
+					logger.Info("import sync completed", "import", fmt.Sprintf("%s/%s", ns, name), "nextRun", entry.Next)
+				}
 			}
 		})
 		if err != nil {
@@ -269,16 +275,24 @@ func (s *SyncController) syncImport(ctx context.Context, namespace, name, fromEx
 	}
 
 	// Debug: log source secret info
-	logger.Info("source secret found", "secretRef", secretRef, "type", src.Type, "hasTlsCrt", src.Data["tls.crt"] != nil, "hasTlsKey", src.Data["tls.key"] != nil)
+	logger.Info("source secret found", "secretRef", secretRef, "type", src.Type, "hasTlsCrt", src.Data["tls.crt"] != nil, "hasTlsKey", src.Data["tls.key"] != nil, "hasCaCrt", src.Data["ca.crt"] != nil)
 	// upsert target secret
 	var tgt corev1.Secret
 	tgtKey := types.NamespacedName{Namespace: namespace, Name: targetSecret}
 	if err := s.Get(ctx, tgtKey, &tgt); err != nil {
 		// Secret doesn't exist, create it
+		tgtData := map[string][]byte{
+			"tls.crt": src.Data["tls.crt"],
+			"tls.key": src.Data["tls.key"],
+		}
+		// Copy ca.crt if it exists in the source secret
+		if src.Data["ca.crt"] != nil {
+			tgtData["ca.crt"] = src.Data["ca.crt"]
+		}
 		tgt = corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: targetSecret},
 			Type:       corev1.SecretTypeTLS,
-			Data:       map[string][]byte{"tls.crt": src.Data["tls.crt"], "tls.key": src.Data["tls.key"]},
+			Data:       tgtData,
 		}
 		if err := s.Create(ctx, &tgt); err != nil {
 			logger.Error(err, "failed to create target secret", "targetSecret", targetSecret, "namespace", namespace)
@@ -293,6 +307,13 @@ func (s *SyncController) syncImport(ctx context.Context, namespace, name, fromEx
 		tgt.Type = corev1.SecretTypeTLS
 		tgt.Data["tls.crt"] = src.Data["tls.crt"]
 		tgt.Data["tls.key"] = src.Data["tls.key"]
+		// Copy ca.crt if it exists in the source secret
+		if src.Data["ca.crt"] != nil {
+			tgt.Data["ca.crt"] = src.Data["ca.crt"]
+		} else {
+			// Remove ca.crt if it doesn't exist in source
+			delete(tgt.Data, "ca.crt")
+		}
 		if err := s.Update(ctx, &tgt); err != nil {
 			logger.Error(err, "failed to update target secret", "targetSecret", targetSecret, "namespace", namespace)
 			return err
