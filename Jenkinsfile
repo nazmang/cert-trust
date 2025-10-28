@@ -3,7 +3,7 @@ pipeline {
     agent { label 'docker' }
 
     environment {
-        BASE_VERSION = '0.1.2'
+        BASE_VERSION = '0.1.3'
     }
 
     stages {
