@@ -99,6 +99,12 @@ func (s *SyncController) buildSchedules(ctx context.Context) error {
 	}
 	log.FromContext(ctx).Info("found CertificateExports", "count", len(exportList.Items))
 
+	// Debug: log export details
+	for i := range exportList.Items {
+		item := exportList.Items[i]
+		log.FromContext(ctx).Info("export details", "namespace", item.GetNamespace(), "name", item.GetName())
+	}
+
 	importList := &unstructured.UnstructuredList{}
 	importList.SetGroupVersionKind(schemaGVKList("CertificateImport"))
 	if err := s.List(ctx, importList); err != nil {
@@ -106,6 +112,13 @@ func (s *SyncController) buildSchedules(ctx context.Context) error {
 		return err
 	}
 	log.FromContext(ctx).Info("found CertificateImports", "count", len(importList.Items))
+
+	// Debug: log import details
+	for i := range importList.Items {
+		item := importList.Items[i]
+		fromExport := getString(item.Object, "spec.fromExport")
+		log.FromContext(ctx).Info("import details", "namespace", item.GetNamespace(), "name", item.GetName(), "fromExport", fromExport)
+	}
 
 	// Check if we need to rebuild schedules (only if resources changed)
 	exportCount := len(exportList.Items)
@@ -260,8 +273,13 @@ func (s *SyncController) syncExport(ctx context.Context, namespace, name, secret
 
 func (s *SyncController) syncImport(ctx context.Context, namespace, name, fromExport, targetSecret string) error {
 	logger := log.FromContext(ctx).WithValues("import", fmt.Sprintf("%s/%s", namespace, name))
+
+	// Debug: log the fromExport reference being parsed
+	logger.Info("parsing export reference", "fromExport", fromExport, "importNamespace", namespace)
+
 	// resolve export
 	expKey := parseNSName(namespace, fromExport)
+	logger.Info("resolved export key", "exportNamespace", expKey.Namespace, "exportName", expKey.Name)
 	exp := &unstructured.Unstructured{}
 	exp.SetGroupVersionKind(schemaGVK("CertificateExport"))
 	if err := s.Get(ctx, expKey, exp); err != nil {
